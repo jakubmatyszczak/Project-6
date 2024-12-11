@@ -23,9 +23,7 @@ main :: ()
     g.player = player_create(.{0,0});
 
     win := false;
-    for x: 0..6
-        light_enable(light_create(.{sin(cast(float32)x) * 500., cos(cast(float32)x) * 500.}, 250.), true);
-    light_enable(light_create(.{0., 0.}, 1000.), true);
+    light_enable(light_create(.{0., 0.}, 1000., 0.2), true);
 
     while 1
     {

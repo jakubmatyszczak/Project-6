@@ -72,6 +72,7 @@ Projectile :: struct
 {
     pEntity : s32;
     target : Vector2;
+    spawn : Vector2;
 }
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
@@ -184,21 +185,23 @@ projectile_create :: (fpos : Vector2, target : Vector2) -> s32
     pEntity := entity_create(Entity.Arch.PROJECTILE, fpos, TexId.NONE);
     proj, e := getProjectileFromPEntity(pEntity);
     proj.target = target;
-    e.fvel = normalize(target - fpos) * 50;
+    proj.spawn = fpos;
+    e.fvel = normalize(target - fpos) * 20;
     return pEntity;
 }
 projectile_update :: (pEntity: s32, dt: float)
 {
     proj, ent := getProjectileFromPEntity(pEntity);
     ent.fpos += ent.fvel;
-    ent.fvel *= 0.95;
+    ent.fvel *= 0.96;
     if (length(ent.fvel) < 1)
         entity_destroy(pEntity);
 }
 projectile_draw :: (pEntity: s32)
 {
     proj, ent := getProjectileFromPEntity(pEntity);
-    rl.DrawLineEx(ent.fpos, proj.target, 6, rl.BLUE);
+    rl.DrawLineEx(ent.fpos, normalize(ent.fpos - proj.spawn) * 80, 4, rl.BLUE);
+    rl.DrawCircleV(ent.fpos, 12, rl.BLUE);
 }
 object_create_rock :: (fpos : Vector2)
 { 
@@ -251,7 +254,7 @@ player_create :: (pos : Vector2) -> s32
     p.hover = anim_create_hover(2, 16);
     p.jump = anim_create_jump(-64);
     anim_start(*p.hover);
-    p.pLight = light_create(pos, 250);
+    p.pLight = light_create(pos, 250, 0.7);
     light_enable(p.pLight, true);
     return pEntity;
 }
