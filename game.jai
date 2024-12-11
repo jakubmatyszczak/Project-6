@@ -9,18 +9,17 @@ rl :: #import "raylib";
 main :: ()
 {
     random_seed(Basic.current_time_monotonic().low);
-    w : s32 = 1366;
-    h : s32 = 768;
 
     entity_create(Entity.Arch.UNKNOWN, .{}, 0); // Dummy entity to occupy index 0
 
-    rl.InitWindow(w, h, "no6");
+    g.screenSize = .{1366, 768};
+    rl.InitWindow(xx g.screenSize.x, xx g.screenSize.y, "no.6");
     rl.SetTargetFPS(75);
     content_init(*g.content);
 
-    g.light.texture = rl.LoadRenderTexture(w,h);
-    g.camera = .{offset=.{w/2., h/2.}, target=.{0,0}, rotation=0., zoom=1.};
-    g.screenSize = .{xx w, xx h};
+    g.light.texture = rl.LoadRenderTexture(xx g.screenSize.x, xx g.screenSize.y);
+    g.camera = .{offset= .{xx (g.screenSize.x / 2), xx (g.screenSize.y / 2)},
+                    target=.{0,0}, rotation=0., zoom=1.};
     g.player = player_create(.{0,0});
 
     win := false;
@@ -65,8 +64,8 @@ main :: ()
         rl.BeginDrawing();
         rl.BeginMode2D(g.camera);
             rl.ClearBackground(.{38, 20, 20, 255});
-            for x: -10..10
-                for y: -10..10
+            for x: -20..20
+                for y: -20..20
                     rl.DrawTextureEx(g.content.textures[TexId.HEX], .{x * 2*64., y * 2*64.}, 0, 4*2, rl.WHITE);
             entities_draw();
         rl.EndMode2D();

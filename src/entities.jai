@@ -6,6 +6,7 @@ TexId :: enum u32
     ORB :: 2;
     ROCK :: 3;
     KNIFE :: 4;
+    PLAYER :: 5;
 }
 Content :: struct
 {
@@ -17,6 +18,7 @@ content_init :: (c : *Content)
     c.textures[TexId.ORB] = rl.LoadTexture("res/orb.png");
     c.textures[TexId.ROCK] = rl.LoadTexture("res/rock.png");
     c.textures[TexId.KNIFE] = rl.LoadTexture("res/knife.png");
+    c.textures[TexId.PLAYER] = rl.LoadTexture("res/player.png");
 }
 
 Item :: struct
@@ -240,7 +242,7 @@ object_draw :: (pEntitiy: s32)
 
 player_create :: (pos : Vector2) -> s32
 {
-    pEntity := entity_create(Entity.Arch.PLAYER, pos, TexId.ORB);
+    pEntity := entity_create(Entity.Arch.PLAYER, pos, TexId.PLAYER);
     e : *Entity = *g.entities[pEntity];
     e.scale = 3;
     e.color = xx rl.GREEN;
@@ -279,14 +281,14 @@ player_update :: (pEntity: s32, dt : float)
 player_draw :: (pEntity: s32)
 {
     p, e := getPlayerFromPEntity(pEntity);
-    e.dpos = e.fpos + anim_getPos(*p.hover);
+    e.dpos = e.fpos;
     light_getById(p.pLight).fpos = (e.dpos + p.aim) * 0.5;
     sine := cos(g.time * 3.14159);    
     rl.DrawEllipse(xx e.fpos.x, xx e.fpos.y, 12+sine, 8+sine, .{50,50,50,200});
     rl.DrawTexturePro(g.content.textures[e.pTexture],
-        .{0,0,8,8},
-        .{e.dpos.x, e.dpos.y, 8*4,8*4},
-        .{4*4,4*4},
+        .{0,0,32,64},
+        .{e.dpos.x, e.dpos.y, 32, 64},
+        .{16, 32},
         0, rl.RED);
 }
 hud_draw :: ()
