@@ -73,6 +73,7 @@ Projectile :: struct
     pEntity : s32;
     target : Vector2;
     spawn : Vector2;
+    pLight : s32;
 }
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
@@ -186,6 +187,8 @@ projectile_create :: (fpos : Vector2, target : Vector2) -> s32
     proj, e := getProjectileFromPEntity(pEntity);
     proj.target = target;
     proj.spawn = fpos;
+    proj.pLight = light_create(e.fpos, 50, 0.7, rl.BLUE);
+    light_enable(proj.pLight, true);
     e.fvel = normalize(target - fpos) * 20;
     return pEntity;
 }
@@ -194,8 +197,12 @@ projectile_update :: (pEntity: s32, dt: float)
     proj, ent := getProjectileFromPEntity(pEntity);
     ent.fpos += ent.fvel;
     ent.fvel *= 0.96;
+    light_getById(proj.pLight).fpos = ent.fpos;
     if (length(ent.fvel) < 1)
+    {
+        light_delete(proj.pLight);
         entity_destroy(pEntity);
+    }
 }
 projectile_draw :: (pEntity: s32)
 {
@@ -254,7 +261,7 @@ player_create :: (pos : Vector2) -> s32
     p.hover = anim_create_hover(2, 16);
     p.jump = anim_create_jump(-64);
     anim_start(*p.hover);
-    p.pLight = light_create(pos, 250, 0.7);
+    p.pLight = light_create(pos, 450, 0.7, 0.75);
     light_enable(p.pLight, true);
     return pEntity;
 }
@@ -278,6 +285,9 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
 player_update :: (pEntity: s32, dt : float)
 {
     p, e := getPlayerFromPEntity(pEntity);
+    l := light_getById(p.pLight);
+    l.fpos = e.fpos;
+    l.direction = atan2(-(g.mouseWorld - e.fpos).y, (g.mouseWorld - e.fpos).x) - 1.579;
     anim_update(*p.hover, dt);
     anim_update(*p.jump, dt);
 }
@@ -285,7 +295,6 @@ player_draw :: (pEntity: s32)
 {
     p, e := getPlayerFromPEntity(pEntity);
     e.dpos = e.fpos;
-    light_getById(p.pLight).fpos = (e.dpos + p.aim) * 0.5;
     sine := cos(g.time * 3.14159);    
     rl.DrawEllipse(xx e.fpos.x, xx e.fpos.y, 12+sine, 8+sine, .{50,50,50,200});
     rl.DrawTexturePro(g.content.textures[e.pTexture],

@@ -31,6 +31,7 @@ main :: ()
         g.time += dt;
         g.mouseScreen = rl.GetMousePosition();
         g.mouseWorld = rl.GetScreenToWorld2D(g.mouseScreen, g.camera);
+        g.mouseScreen.y = g.screenSize.y - g.mouseScreen.y;
 
         // process
         entities_process();
@@ -43,7 +44,7 @@ main :: ()
                     down=rl.IsKeyDown(rl.KeyboardKey.KEY_S),
                     left=rl.IsKeyDown(rl.KeyboardKey.KEY_A),
                     right=rl.IsKeyDown(rl.KeyboardKey.KEY_D),
-                    interact=rl.IsKeyDown(rl.KeyboardKey.KEY_F),
+                    interact=rl.IsKeyPressed(rl.KeyboardKey.KEY_F),
                     shoot=rl.IsMouseButtonPressed(rl.MouseButton.LEFT)
                 );
         }
