@@ -25,6 +25,8 @@ main :: ()
     win := false;
     light_enable(light_create(.{0., 0.}, 1000., 0.2), true);
 
+    enemy_create(.{500, 300}, Enemy.Type.BASIC);
+
     while 1
     {
         dt := rl.GetFrameTime();

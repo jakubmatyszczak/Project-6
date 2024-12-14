@@ -91,6 +91,18 @@ Projectile :: struct
     stage: Stage;
     timer: float;
 }
+Enemy :: struct 
+{
+    Type :: enum
+    {
+        BASIC;
+    }
+    pEntity : s32;
+    rangeMax : float;
+    rangeOptimal : float;
+    speed : float;
+    timer : float;
+}
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
 {
@@ -131,6 +143,8 @@ entities_process :: ()
                 object_process(xx it_index);
             case Arch.PROJECTILE;
                 // projectile_draw(xx it_index);
+            case Arch.ENEMY;
+                // object_process(xx it_index);
         }
     }
 }
@@ -152,6 +166,8 @@ entities_update :: (dt: float)
                 object_update(xx it_index, dt);
             case Arch.PROJECTILE;
                 projectile_update(xx it_index, dt);
+            case Arch.ENEMY;
+                enemy_update(xx it_index, dt);
         }
     }
 }
@@ -173,6 +189,8 @@ entities_draw :: ()
                 object_draw(xx it_index);
             case Arch.PROJECTILE;
                 projectile_draw(xx it_index);
+            case Arch.ENEMY;
+                enemy_draw(xx it_index);
         }
     }
 }
@@ -196,8 +214,47 @@ getProjectileFromPEntity :: (pEntity: s32) -> *Projectile, *Entity
 {
     return cast(*Projectile)g.entities[pEntity].data.data, *g.entities[pEntity];
 }
+getEnemyFromPEntity :: (pEntity: s32) -> *Enemy, *Entity
+{
+    return cast(*Enemy)g.entities[pEntity].data.data, *g.entities[pEntity];
+}
 
-projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type) -> s32
+enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
+{
+    pEntity := entity_create(Entity.Arch.ENEMY, fpos, TexId.ORB);
+    enemy, ent := getEnemyFromPEntity(pEntity);
+    enemy.rangeMax = 500;
+    enemy.rangeOptimal = 300;
+    enemy.speed = 2;
+    return pEntity;
+}
+enemy_update :: (pEntity: s32, dt: float)
+{
+    enemy, ent := getEnemyFromPEntity(pEntity);
+    player, entPlayer := getPlayerFromPEntity(g.player);
+
+    toPlayer := entPlayer.fpos - ent.fpos;
+    toPlayerLen := length(toPlayer);
+
+    enemy.timer += dt;
+    if  toPlayerLen > enemy.rangeOptimal
+        ent.fvel = normalize(toPlayer) * enemy.speed; 
+    else
+        ent.fvel = .{0, 0};
+    if enemy.timer > 0.7
+    {
+        enemy.timer = 0;
+        projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax);
+    }    
+    ent.fpos += ent.fvel;
+}
+enemy_draw :: (pEntity: s32)
+{
+    enemy, ent := getEnemyFromPEntity(pEntity);
+    rl.DrawCircleV(ent.fpos, 30, rl.RED); 
+}
+projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
+                        range: float = 500) -> s32
 {
     pEntity := entity_create(Entity.Arch.PROJECTILE, fpos, TexId.NONE);
     proj, e := getProjectileFromPEntity(pEntity);
@@ -210,7 +267,7 @@ projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type)
             proj.pLight = light_create(e.fpos, 50, 0.7, rl.WHITE);
             light_enable(proj.pLight, true);
             e.fvel = normalize(targetx - fpos) * 8;
-            proj.range = 5 * 100;
+            proj.range = range;
         }
         case Projectile.Type.MAGIC;
         {
@@ -218,7 +275,7 @@ projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type)
             proj.pLight = light_create(e.fpos, 50, 0.7, rl.BLUE);
             light_enable(proj.pLight, true);
             e.fvel = normalize(targetx - fpos);
-            proj.range = 8 * 100;
+            proj.range = range;
         }
     }
     return pEntity;
@@ -334,7 +391,7 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
     if down moveDir.y += 1;
     if right moveDir.x += 1;
     if left moveDir.x -= 1;
-    e.fvel += normalize(moveDir) * 2;
+    e.fvel += normalize(moveDir) * 1.25;
     e.fvel *= 0.8;
     e.fpos += e.fvel;
     if interact

@@ -9,6 +9,7 @@ Entity :: struct
         ITEM;
         OBJECT;
         PROJECTILE;
+        ENEMY;
     };
     active : bool;
     arch : Arch;
