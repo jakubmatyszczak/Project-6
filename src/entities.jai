@@ -90,6 +90,9 @@ Projectile :: struct
     pLight : s32;
     stage: Stage;
     timer: float;
+
+    pCollider : s32;
+    colliderGroup : Collider.Group;
 }
 Enemy :: struct 
 {
@@ -102,6 +105,64 @@ Enemy :: struct
     rangeOptimal : float;
     speed : float;
     timer : float;
+    
+    pCollider : s32;
+}
+Collider :: struct
+{
+    Group :: enum
+    {
+        HIT_PLAYER;
+        HIT_ENEMY;
+    }
+    pCollider : s32;
+
+    fpos : Vector2;
+    radius : float;
+    group : Group;
+    
+    processed : bool;
+    hit : bool;
+}
+
+collider_add :: (fpos : Vector2, radius : float, group : Collider.Group) -> s32
+{
+    pCollider : s32 = g.collidersActive;
+    g.colliders[pCollider] = .{pCollider = pCollider, fpos = fpos, radius = radius, group = group,
+                                hit = false, processed = false};
+    g.collidersActive += 1;
+    return pCollider;
+}
+collider_process :: ()
+{
+    for a : 0..g.collidersActive-1
+        for b : 0..g.collidersActive-1 
+        {
+            if a == b
+                continue;
+            colliderA : *Collider = *g.colliders[a];
+            colliderB : *Collider = *g.colliders[b];
+            colliderA.processed = true;
+            colliderB.processed = true;
+            if colliderA.group != colliderB.group
+                continue;
+            if length(colliderA.fpos - colliderB.fpos) < (colliderA.radius + colliderB.radius)
+            {
+                colliderA.hit = true;
+                colliderB.hit = true;
+            }
+        }
+}
+collider_isHit :: (pCollider: s32) -> bool
+{
+    collider := getColliderFromPCollider(pCollider);
+    return (collider.processed && collider.hit);
+}
+collider_finish :: ()
+{
+    for *collider : g.colliders
+        collider.processed = false;
+    g.collidersActive = 0;
 }
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
@@ -142,9 +203,9 @@ entities_process :: ()
             case Arch.OBJECT;
                 object_process(xx it_index);
             case Arch.PROJECTILE;
-                // projectile_draw(xx it_index);
+                projectile_process(xx it_index);
             case Arch.ENEMY;
-                // object_process(xx it_index);
+                enemy_process(xx it_index);
         }
     }
 }
@@ -218,6 +279,10 @@ getEnemyFromPEntity :: (pEntity: s32) -> *Enemy, *Entity
 {
     return cast(*Enemy)g.entities[pEntity].data.data, *g.entities[pEntity];
 }
+getColliderFromPCollider :: (pCollider: s32) -> *Collider
+{
+    return *g.colliders[pCollider];
+}
 
 enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
 {
@@ -228,10 +293,20 @@ enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
     enemy.speed = 2;
     return pEntity;
 }
+enemy_process:: (pEntity: s32)
+{
+    enemy, ent := getEnemyFromPEntity(pEntity);
+    enemy.pCollider = collider_add(ent.fpos, 30, Collider.Group.HIT_ENEMY);
+}
 enemy_update :: (pEntity: s32, dt: float)
 {
     enemy, ent := getEnemyFromPEntity(pEntity);
     player, entPlayer := getPlayerFromPEntity(g.player);
+    if (collider_isHit(enemy.pCollider))
+    {
+        entity_destroy(pEntity);
+        return;
+    }
 
     toPlayer := entPlayer.fpos - ent.fpos;
     toPlayerLen := length(toPlayer);
@@ -241,10 +316,11 @@ enemy_update :: (pEntity: s32, dt: float)
         ent.fvel = normalize(toPlayer) * enemy.speed; 
     else
         ent.fvel = .{0, 0};
-    if enemy.timer > 0.7
+    if enemy.timer > 1.3
     {
         enemy.timer = 0;
-        projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax);
+        projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax, 
+            Collider.Group.HIT_PLAYER);
     }    
     ent.fpos += ent.fvel;
 }
@@ -254,19 +330,20 @@ enemy_draw :: (pEntity: s32)
     rl.DrawCircleV(ent.fpos, 30, rl.RED); 
 }
 projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
-                        range: float = 500) -> s32
+                        range: float = 500, colliderGroup: Collider.Group) -> s32
 {
     pEntity := entity_create(Entity.Arch.PROJECTILE, fpos, TexId.NONE);
     proj, e := getProjectileFromPEntity(pEntity);
     proj.target = targetx;
     proj.spawn = fpos;
     proj.type = typex;
+    proj.colliderGroup = colliderGroup;
     if proj.type == {
         case Projectile.Type.LINEAR;
         {
             proj.pLight = light_create(e.fpos, 50, 0.7, rl.WHITE);
             light_enable(proj.pLight, true);
-            e.fvel = normalize(targetx - fpos) * 8;
+            e.fvel = normalize(targetx - fpos) * 4;
             proj.range = range;
         }
         case Projectile.Type.MAGIC;
@@ -280,11 +357,18 @@ projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
     }
     return pEntity;
 }
+projectile_process:: (pEntityx: s32)
+{
+    proj, ent := getProjectileFromPEntity(pEntityx);
+    proj.pCollider = collider_add(ent.fpos, 6, proj.colliderGroup);
+}
 projectile_update :: (pEntityx: s32, dt: float)
 {
     shouldDelete := false;
     proj, ent := getProjectileFromPEntity(pEntityx);
-    ent.fpos += ent.fvel;
+    collider := getColliderFromPCollider(proj.pCollider);
+    if (collider_isHit(proj.pCollider))
+        shouldDelete = true;
     if proj.type == {
         case Projectile.Type.LINEAR;
         {
@@ -312,6 +396,7 @@ projectile_update :: (pEntityx: s32, dt: float)
             }
         }
     }
+    ent.fpos += ent.fvel;
     light_getById(proj.pLight).fpos = ent.fpos;
     if (shouldDelete)
     {
@@ -322,8 +407,12 @@ projectile_update :: (pEntityx: s32, dt: float)
 projectile_draw :: (pEntity: s32)
 {
     proj, ent := getProjectileFromPEntity(pEntity);
-    rl.DrawLineEx(ent.fpos, proj.spawn, 3, rl.BLUE);
-    rl.DrawCircleV(ent.fpos, 12, rl.BLUE);
+    clr := rl.BLUE;
+    if proj.type == Projectile.Type.LINEAR
+        clr = rl.RED;
+    else
+        rl.DrawLineEx(ent.fpos, proj.spawn, 3, clr);
+    rl.DrawCircleV(ent.fpos, 12, clr);
 }
 object_create_rock :: (fpos : Vector2)
 { 
@@ -395,7 +484,7 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
     e.fvel *= 0.8;
     e.fpos += e.fvel;
     if interact
-        projectile_create(e.fpos, g.mouseWorld, Projectile.Type.MAGIC);
+        projectile_create(e.fpos, g.mouseWorld, Projectile.Type.MAGIC, 500, Collider.Group.HIT_ENEMY);
 }
 player_update :: (pEntity: s32, dt : float)
 {

@@ -37,6 +37,7 @@ main :: ()
 
         // process
         entities_process();
+        collider_process();
 
         //input
         if !win
@@ -78,5 +79,8 @@ main :: ()
             rl.DrawText("Press ENTER to quit.", 200,250,16, rl.WHITE);
         }
         rl.EndDrawing();
+
+        // finish
+        collider_finish();
     }
 }

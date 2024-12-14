@@ -37,6 +37,9 @@ Globals :: struct
     player : s32;
     level : u32;
     levelMax :: 3;
+    
+    colliders : [128]Collider;
+    collidersActive : s32;
 
     light : Lights;
 }
