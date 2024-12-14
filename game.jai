@@ -25,8 +25,8 @@ main :: ()
     win := false;
     light_enable(light_create(.{0., 0.}, 1000., 0.2), true);
 
-    enemy_create(.{500, 300}, Enemy.Type.BASIC);
 
+    spawnTimer := 0.;
     while 1
     {
         dt := rl.GetFrameTime();
@@ -34,6 +34,13 @@ main :: ()
         g.mouseScreen = rl.GetMousePosition();
         g.mouseWorld = rl.GetScreenToWorld2D(g.mouseScreen, g.camera);
         g.mouseScreen.y = g.screenSize.y - g.mouseScreen.y;
+
+        spawnTimer+=dt;
+        if spawnTimer > 3.
+        {
+            spawnTimer = 0.;
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+        }
 
         // process
         entities_process();

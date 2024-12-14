@@ -51,4 +51,10 @@ FrameData :: struct
 frame := FrameData.{};
 g := Globals.{};
 
-
+polarToXY :: (angle: float, radius : float) -> Vector2
+{
+    xy : Vector2 = ---;
+    xy.x = sin(angle) * radius;
+    xy.y = cos(angle) * radius;
+    return xy;
+}
