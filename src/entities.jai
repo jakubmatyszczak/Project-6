@@ -70,10 +70,26 @@ Object :: struct
 }
 Projectile :: struct
 {
+    Type :: enum
+    {
+        LINEAR;
+        MAGIC;
+    }
+    Stage :: enum
+    {
+        CREATE;
+        SHOOT;
+        DESTROY;
+    }
     pEntity : s32;
     target : Vector2;
     spawn : Vector2;
+    range : float;
+    type : Type;
+
     pLight : s32;
+    stage: Stage;
+    timer: float;
 }
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
@@ -181,33 +197,75 @@ getProjectileFromPEntity :: (pEntity: s32) -> *Projectile, *Entity
     return cast(*Projectile)g.entities[pEntity].data.data, *g.entities[pEntity];
 }
 
-projectile_create :: (fpos : Vector2, target : Vector2) -> s32
+projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type) -> s32
 {
     pEntity := entity_create(Entity.Arch.PROJECTILE, fpos, TexId.NONE);
     proj, e := getProjectileFromPEntity(pEntity);
-    proj.target = target;
+    proj.target = targetx;
     proj.spawn = fpos;
-    proj.pLight = light_create(e.fpos, 50, 0.7, rl.BLUE);
-    light_enable(proj.pLight, true);
-    e.fvel = normalize(target - fpos) * 20;
+    proj.type = typex;
+    if proj.type == {
+        case Projectile.Type.LINEAR;
+        {
+            proj.pLight = light_create(e.fpos, 50, 0.7, rl.WHITE);
+            light_enable(proj.pLight, true);
+            e.fvel = normalize(targetx - fpos) * 8;
+            proj.range = 5 * 100;
+        }
+        case Projectile.Type.MAGIC;
+        {
+            proj.stage = Projectile.Stage.CREATE;
+            proj.pLight = light_create(e.fpos, 50, 0.7, rl.BLUE);
+            light_enable(proj.pLight, true);
+            e.fvel = normalize(targetx - fpos);
+            proj.range = 8 * 100;
+        }
+    }
     return pEntity;
 }
-projectile_update :: (pEntity: s32, dt: float)
+projectile_update :: (pEntityx: s32, dt: float)
 {
-    proj, ent := getProjectileFromPEntity(pEntity);
+    shouldDelete := false;
+    proj, ent := getProjectileFromPEntity(pEntityx);
     ent.fpos += ent.fvel;
-    ent.fvel *= 0.96;
+    if proj.type == {
+        case Projectile.Type.LINEAR;
+        {
+            ent.fvel *= 0.999;
+            if length(ent.fpos - proj.spawn) > proj.range
+                shouldDelete = true;
+        }
+        case Projectile.Type.MAGIC;
+        {
+            proj.timer += dt;
+            if proj.timer > 0.25
+                proj.stage = Projectile.Stage.SHOOT;
+            if proj.timer > 1.5 || length(ent.fpos - proj.spawn) > proj.range
+                proj.stage = Projectile.Stage.DESTROY;
+            if proj.stage == 
+            {
+                case Projectile.Stage.SHOOT;
+                    ent.fvel *= 1.1;
+                case Projectile.Stage.DESTROY;
+                {
+                    ent.fvel *= 0.7;
+                    if length(ent.fvel) < 1
+                        shouldDelete = true;
+                }
+            }
+        }
+    }
     light_getById(proj.pLight).fpos = ent.fpos;
-    if (length(ent.fvel) < 1)
+    if (shouldDelete)
     {
         light_delete(proj.pLight);
-        entity_destroy(pEntity);
+        entity_destroy(pEntityx);
     }
 }
 projectile_draw :: (pEntity: s32)
 {
     proj, ent := getProjectileFromPEntity(pEntity);
-    rl.DrawLineEx(ent.fpos, normalize(ent.fpos - proj.spawn) * 80, 4, rl.BLUE);
+    rl.DrawLineEx(ent.fpos, proj.spawn, 3, rl.BLUE);
     rl.DrawCircleV(ent.fpos, 12, rl.BLUE);
 }
 object_create_rock :: (fpos : Vector2)
@@ -280,7 +338,7 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
     e.fvel *= 0.8;
     e.fpos += e.fvel;
     if interact
-        projectile_create(e.fpos, g.mouseWorld);
+        projectile_create(e.fpos, g.mouseWorld, Projectile.Type.MAGIC);
 }
 player_update :: (pEntity: s32, dt : float)
 {
