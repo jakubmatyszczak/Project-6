@@ -10,6 +10,7 @@ Entity :: struct
         OBJECT;
         PROJECTILE;
         ENEMY;
+        EFFECT;
     };
     active : bool;
     arch : Arch;
@@ -58,4 +59,9 @@ polarToXY :: (angle: float, radius : float) -> Vector2
     xy.x = sin(angle) * radius;
     xy.y = cos(angle) * radius;
     return xy;
+}
+radToDeg :: (angle: float) -> float
+{
+    ratio :: 180. / 3.14159;
+    return angle * ratio;
 }

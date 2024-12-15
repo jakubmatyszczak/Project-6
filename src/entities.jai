@@ -7,6 +7,8 @@ TexId :: enum u32
     ROCK :: 3;
     KNIFE :: 4;
     PLAYER :: 5;
+    EXPLOSION;
+    EXPLOSION_LINE;
 }
 Content :: struct
 {
@@ -19,6 +21,8 @@ content_init :: (c : *Content)
     c.textures[TexId.ROCK] = rl.LoadTexture("res/rock.png");
     c.textures[TexId.KNIFE] = rl.LoadTexture("res/knife.png");
     c.textures[TexId.PLAYER] = rl.LoadTexture("res/player.png");
+    c.textures[TexId.EXPLOSION] = rl.LoadTexture("res/explosion.png");
+    c.textures[TexId.EXPLOSION_LINE] = rl.LoadTexture("res/explosion_line.png");
 }
 
 Item :: struct
@@ -114,6 +118,22 @@ Enemy :: struct
     pCollider : s32;
     pColliderAux : s32;
 }
+Effect :: struct
+{
+    Type :: enum
+    {
+        EXPLOSION;
+        EXPLOSION_LINE;
+    }
+    pEntity : s32;
+    
+    timer : float;
+
+    frame : s32;
+    frames : s32;
+    frameSize : Vector2;
+    timePerFrame : float;
+}
 Collider :: struct
 {
     Group :: enum
@@ -207,6 +227,7 @@ entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
         entity.fpos = fpos;
         entity.pTexture = pTexture;
         entity.scale = 1;
+        entity.color = rl.WHITE;
         memset(entity.data.data, 0, entity.data.count);
         g.nEntities += 1;
         return cast(s32)it_index;
@@ -241,6 +262,8 @@ entities_process :: ()
                 projectile_process(xx it_index);
             case Arch.ENEMY;
                 enemy_process(xx it_index);
+            case Arch.EFFECT;
+                // effect_process(xx it_index);
         }
     }
 }
@@ -264,6 +287,8 @@ entities_update :: (dt: float)
                 projectile_update(xx it_index, dt);
             case Arch.ENEMY;
                 enemy_update(xx it_index, dt);
+            case Arch.EFFECT;
+                effect_update(xx it_index, dt);
         }
     }
 }
@@ -287,6 +312,8 @@ entities_draw :: ()
                 projectile_draw(xx it_index);
             case Arch.ENEMY;
                 enemy_draw(xx it_index);
+            case Arch.EFFECT;
+                effect_draw(xx it_index);
         }
     }
 }
@@ -314,9 +341,83 @@ getEnemyFromPEntity :: (pEntity: s32) -> *Enemy, *Entity
 {
     return cast(*Enemy)g.entities[pEntity].data.data, *g.entities[pEntity];
 }
+getEffectFromPEntity :: (pEntity: s32) -> *Effect, *Entity
+{
+    return cast(*Effect)g.entities[pEntity].data.data, *g.entities[pEntity];
+}
 getColliderFromPCollider :: (pCollider: s32) -> *Collider
 {
     return *g.colliders[pCollider];
+}
+// relativeRadius is apperant size, for example for a 32x32 box it will be 16-22.6 (a/2, or d/2)
+effect_create :: (fpos : Vector2, type: Effect.Type, relativeRadius: float, color: rl.Color) -> s32
+{
+    texture : TexId;
+    if type == 
+    {
+    case Effect.Type.EXPLOSION;
+        texture = TexId.EXPLOSION;
+    case Effect.Type.EXPLOSION_LINE;
+        texture = TexId.EXPLOSION_LINE;
+    }
+    pEntity := entity_create(Entity.Arch.EFFECT, fpos, texture);
+    effect, ent := getEffectFromPEntity(pEntity);
+    {
+        using effect;
+        type = type;
+        ent.color = color;
+        if type == 
+        { 
+            case Type.EXPLOSION;
+                frame = 0;
+                frames = 6;
+                frameSize = .{32, 32};
+                timePerFrame = 0.03;
+                ent.scale = relativeRadius / 8;
+            case Type.EXPLOSION_LINE;
+                frame = 0;
+                frames = 6;
+                frameSize = .{16, 16};
+                timePerFrame = 0.03;
+                ent.scale = relativeRadius / 8;
+        }
+    }
+    return pEntity;
+}
+effect_update :: (pEntityx : s32, dt: float)
+{
+    effect, ent := getEffectFromPEntity(pEntityx);
+    {
+        using effect;
+        timer += dt;
+        ent.fpos += ent.fvel;
+        if timer < timePerFrame 
+            return;
+        timer = 0.;
+        frame += 1;
+        if frame > frames
+        {
+            entity_destroy(pEntityx);
+            return;
+        }
+    }
+}
+effect_draw :: (pEntityx : s32)
+{
+    effect, ent := getEffectFromPEntity(pEntityx);
+    {
+        using effect;
+        srcRect : rl.Rectangle = .{frame * frameSize.x, 0, frameSize.x, frameSize.y};
+        dstRect : rl.Rectangle = .{ent.fpos.x, ent.fpos.y, ent.scale * frameSize.x, ent.scale * frameSize.y};
+        rl.DrawTexturePro(g.content.textures[ent.pTexture], srcRect, dstRect, frameSize*ent.scale/2,
+                            radToDeg(ent.rot) , ent.color);
+    }
+}
+effect_setValue :: (pEntityx : s32, velocity : Vector2, rotation: float)
+{
+    effect, ent := getEffectFromPEntity(pEntityx);
+    ent.fvel = velocity;
+    ent.rot = rotation;
 }
 
 enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
@@ -367,12 +468,14 @@ enemy_update :: (pEntity: s32, dt: float)
     case Enemy.Type.BASIC;
         if (collider_isHit(enemy.pCollider))
         {
+            effect_create(ent.fpos, Effect.Type.EXPLOSION, enemy.size, rl.RED);
             entity_destroy(pEntity);
             return;
         }
     case Enemy.Type.RINGO;
         if (collider_isHit(enemy.pColliderAux))
         {
+            effect_create(ent.fpos, Effect.Type.EXPLOSION, enemy.size, rl.RED);
             entity_destroy(pEntity);
             return;
         }
@@ -492,6 +595,8 @@ projectile_update :: (pEntityx: s32, dt: float)
     light_getById(proj.pLight).fpos = ent.fpos;
     if (shouldDelete)
     {
+        pEffect := effect_create(ent.fpos, Effect.Type.EXPLOSION_LINE, 16, rl.BLUE);
+        effect_setValue(pEffect, ent.fvel, atan2(ent.fvel.y, ent.fvel.x));
         light_delete(proj.pLight);
         entity_destroy(pEntityx);
     }
