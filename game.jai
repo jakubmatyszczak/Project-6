@@ -17,7 +17,7 @@ main :: ()
     rl.InitAudioDevice();
     music := rl.LoadMusicStream("res/sfx/battle.ogg");
     rl.PlayMusicStream(music);
-    // rl.ToggleFullscreen();
+    rl.ToggleFullscreen();
     rl.SetTargetFPS(75);
     content_init(*g.content);
 
@@ -33,12 +33,16 @@ main :: ()
     start := false;
 
     winTime : float;
+    spawnBasic := 3.;
+    spawnRingo := 8.;
     spawnTimerBasic := 0.;
-    spawnTimerRingo := -5.;
-    spawnTimerBoss := -1.;
+    spawnTimerRingo := -3.;
+    spawnTimerBoss := -60.;
+    difficultyBumpTimer := -20.;
     bossFightStart : bool = false;
     bossFightInProgress : bool = false;
     alaramsTriggered := 0;
+    level := 0;
     while !start
     {
         rl.UpdateMusicStream(music);
@@ -74,16 +78,26 @@ main :: ()
             spawnTimerBasic += dt;
             spawnTimerRingo += dt;
             spawnTimerBoss += dt;
+            difficultyBumpTimer += dt;
         }
-        if spawnTimerBasic > 3.
+        if difficultyBumpTimer > 0
+        {
+            sound_play(SfxId.ALARM, 0.7, 2.);
+            difficultyBumpTimer = -20.;
+            spawnBasic *= 0.8;
+            spawnRingo *= 0.8;
+        }
+        if spawnTimerBasic > spawnBasic
         {
             spawnTimerBasic = 0.;
-            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+            for 0..level*2+1
+                enemy_create(polarToXY(random_get_within_range(0. , 6.283), random_get_within_range(800, 1500)), Enemy.Type.BASIC);
         }
-        if spawnTimerRingo > 8.
+        if spawnTimerRingo > spawnRingo
         {
             spawnTimerRingo = 0.;
-            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 1000), Enemy.Type.RINGO);
+            for 0..level
+                enemy_create(polarToXY(random_get_within_range(0. , 6.283), 1250), Enemy.Type.RINGO);
         }
         if spawnTimerBoss > 0
         {
@@ -99,8 +113,8 @@ main :: ()
                 mainLight.tint = rl.RED;
                 for 0..20
                 {
-                    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 2000), Enemy.Type.RINGO);
-                    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 3000), Enemy.Type.BASIC);
+                    enemy_create(polarToXY(random_get_within_range(0. , 6.283), random_get_within_range(2000, 2250)), Enemy.Type.RINGO);
+                    enemy_create(polarToXY(random_get_within_range(0. , 6.283), random_get_within_range(3000, 3500)), Enemy.Type.BASIC);
                 }
             }
         }
