@@ -33,7 +33,7 @@ light_create :: (pos : Vector2, radius: float, intensity: float, tint: rl.Color 
 }
 light_create :: (pos : Vector2, radius: float, intensity: float, angle: float) -> id: s32
 {
-    id := light_create(pos, radius, intensity);
+    id := light_create(pos, radius, intensity, rl.WHITE);
     if id < 0
         return id;
     g.light.instances[id].angle = angle;
@@ -57,17 +57,18 @@ light_process :: ()
         windowPos := rl.GetWorldToScreen2D(l.fpos, g.camera);
 		windowPos.y = g.light.texture.texture.height - windowPos.y;  // dunno why this is needed
         
-        tintDark := l.tint;
+        tint := l.tint;
+        tint.a = l.intensity;
+        tintDark := tint;
         tintDark.a /= 4;
         if l.angle == 0   // Light is circular
         {
             rl.DrawCircleV(windowPos, l.radius, tintDark);
-            rl.DrawCircleV(windowPos, l.radius * 0.5, .{l.tint.r, l.tint.g, l.tint.b,
-                                l.intensity - l.intensity / 4});
+            rl.DrawCircleV(windowPos, l.radius * 0.5, tint);
             continue;
         }
         //Light is conical
-        rl.DrawCircleV(windowPos, l.radius / 8, l.tint);
+        rl.DrawCircleV(windowPos, l.radius / 8, tint);
         p2 := rotate(.{0. , l.radius}, l.direction + l.angle * 0.75);
         p3 := rotate(.{0. , l.radius}, l.direction - l.angle * 0.75);
         rl.DrawTriangle(windowPos, windowPos + p2, windowPos + p3, tintDark);

@@ -47,7 +47,7 @@ Globals :: struct
 }
 FrameData :: struct
 {
-    targetTile : Vector2;
+    nEnemies : s32;
 }
 
 frame := FrameData.{};
@@ -64,4 +64,12 @@ radToDeg :: (angle: float) -> float
 {
     ratio :: 180. / 3.14159;
     return angle * ratio;
+}
+clamp :: (min: float, max: float, value: float) -> float
+{
+    if value < min
+        return min;
+    if value > max
+        return max;
+    return value;
 }

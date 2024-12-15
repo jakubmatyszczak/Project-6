@@ -262,6 +262,7 @@ entities_process :: ()
             case Arch.PROJECTILE;
                 projectile_process(xx it_index);
             case Arch.ENEMY;
+                frame.nEnemies+=1;
                 enemy_process(xx it_index);
             case Arch.EFFECT;
                 // effect_process(xx it_index);
@@ -374,7 +375,7 @@ effect_create :: (fpos : Vector2, type: Effect.Type, relativeRadius: float, colo
                 frame = 0;
                 frames = 6;
                 frameSize = .{32, 32};
-                timePerFrame = 0.03;
+                timePerFrame = 0.08;
                 ent.scale = relativeRadius / 8;
                 pLight = light_create(ent.fpos, relativeRadius*4, 1., rl.ORANGE);
                 light_enable(pLight, true);
@@ -382,7 +383,7 @@ effect_create :: (fpos : Vector2, type: Effect.Type, relativeRadius: float, colo
                 frame = 0;
                 frames = 6;
                 frameSize = .{16, 16};
-                timePerFrame = 0.03;
+                timePerFrame = 0.06;
                 ent.scale = relativeRadius / 8;
                 pLight = light_create(ent.fpos, relativeRadius*4, 0.5, rl.PURPLE);
                 light_enable(pLight, true);
@@ -698,6 +699,8 @@ player_update :: (pEntity: s32, dt : float)
     l := light_getById(p.pLight);
     l.fpos = e.fpos;
     l.direction = atan2(-(g.mouseWorld - e.fpos).y, (g.mouseWorld - e.fpos).x) - 1.579;
+    
+    l.intensity = cast(u8)(clamp(0., 255., ((1500. - length(-e.fpos)) / 1500 * 255)));
     anim_update(*p.hover, dt);
     anim_update(*p.jump, dt);
 }
