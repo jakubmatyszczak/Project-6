@@ -37,8 +37,8 @@ main :: ()
     spawnRingo := 8.;
     spawnTimerBasic := 0.;
     spawnTimerRingo := -3.;
-    spawnTimerBoss := -60.;
-    difficultyBumpTimer := -20.;
+    spawnTimerBoss := -100.;
+    difficultyBumpTimer := -30.;
     bossFightStart : bool = false;
     bossFightInProgress : bool = false;
     alaramsTriggered := 0;
@@ -83,15 +83,13 @@ main :: ()
         if difficultyBumpTimer > 0
         {
             sound_play(SfxId.ALARM, 0.7, 2.);
-            difficultyBumpTimer = -20.;
-            spawnBasic *= 0.8;
-            spawnRingo *= 0.8;
+            difficultyBumpTimer = -30.;
             mainLight.intensity = xx(mainLight.intensity * 0.7);
         }
         if spawnTimerBasic > spawnBasic
         {
             spawnTimerBasic = 0.;
-            for 0..level*2+1
+            for 0..level*2
                 enemy_create(polarToXY(random_get_within_range(0. , 6.283), random_get_within_range(800, 1500)), Enemy.Type.BASIC);
         }
         if spawnTimerRingo > spawnRingo
