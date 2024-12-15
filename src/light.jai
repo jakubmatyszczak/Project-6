@@ -67,7 +67,7 @@ light_process :: ()
             continue;
         }
         //Light is conical
-        rl.DrawCircleV(windowPos, l.radius / 4, tintDark);
+        rl.DrawCircleV(windowPos, l.radius / 8, l.tint);
         p2 := rotate(.{0. , l.radius}, l.direction + l.angle * 0.75);
         p3 := rotate(.{0. , l.radius}, l.direction - l.angle * 0.75);
         rl.DrawTriangle(windowPos, windowPos + p2, windowPos + p3, tintDark);

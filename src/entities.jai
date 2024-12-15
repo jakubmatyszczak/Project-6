@@ -672,8 +672,7 @@ player_create :: (pos : Vector2) -> s32
     p.hover = anim_create_hover(2, 16);
     p.jump = anim_create_jump(-64);
     anim_start(*p.hover);
-    p.pLight = light_create(pos, 450, 0.7, 0.75);
-    light_enable(p.pLight, true);
+    p.pLight = light_create(pos, 450, 1., 0.75);
     return pEntity;
 }
 player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool,
@@ -690,7 +689,7 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
     e.fvel += normalize(moveDir) * 1.25;
     e.fvel *= 0.8;
     e.fpos += e.fvel;
-    if interact
+    if shoot 
         projectile_create(e.fpos, g.mouseWorld, Projectile.Type.MAGIC, 500, Collider.Group.HITS_ENEMY);
 }
 player_update :: (pEntity: s32, dt : float)
