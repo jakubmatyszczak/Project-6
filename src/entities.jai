@@ -154,6 +154,8 @@ collider_process :: ()
             colliderB.processed = true;
             if colliderA.group != colliderB.group
                 continue;
+            if colliderA.isHitter && colliderB.isHitter
+                continue; // both hitters - ignore collision
             if length(colliderA.fpos - colliderB.fpos) > (colliderA.radius + colliderB.radius)
                 continue; // no intersection
             if !colliderA.isHitter && !colliderB.isHitter
