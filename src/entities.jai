@@ -127,6 +127,7 @@ Collider :: struct
     radius : float;
     group : Group;
     isHitter : bool;
+    isCollider : bool;
     
     processed : bool;   // was processed this frame?
     collided : bool;    // is colliding with other nonHitter
@@ -134,11 +135,13 @@ Collider :: struct
     collisionVector: Vector2; // only valid if collided
 }
 
-collider_add :: (fpos : Vector2, radius : float, group : Collider.Group, isHitter: bool) -> s32
+collider_add :: (fpos : Vector2, radius : float, group : Collider.Group,
+                    isHitter: bool, isCollider: bool) -> s32
 {
     pCollider : s32 = g.collidersActive;
     g.colliders[pCollider] = .{pCollider = pCollider, fpos = fpos, radius = radius, group = group,
-                                hit = false, processed = false, collided = false, isHitter = isHitter};
+                                hit = false, processed = false, collided = false,
+                                isHitter = isHitter, isCollider = isCollider};
     g.collidersActive += 1;
     return pCollider;
 }
@@ -159,14 +162,14 @@ collider_process :: ()
                 continue; // both hitters - ignore collision
             if length(colliderA.fpos - colliderB.fpos) > (colliderA.radius + colliderB.radius)
                 continue; // no intersection
-            if !colliderA.isHitter && !colliderB.isHitter
+            if colliderA.isCollider && colliderB.isCollider
             {
                 colliderA.collided = true;
                 colliderB.collided = true;
                 colliderA.collisionVector += normalize(colliderB.fpos - colliderA.fpos);
                 colliderB.collisionVector += -colliderA.collisionVector;
             }
-            else
+            if colliderA.isHitter || colliderB.isHitter
             {
                 colliderA.hit = true;
                 colliderB.hit = true;
@@ -344,11 +347,11 @@ enemy_process:: (pEntity: s32)
     if enemy.type ==
     {
     case Enemy.Type.BASIC;
-        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
+        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false, true);
     case Enemy.Type.RINGO;
-        auxPos := polarToXY(g.time, enemy.size);
-        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
-        enemy.pColliderAux = collider_add(ent.fpos + auxPos, 12, Collider.Group.HITS_ENEMY, false);
+        auxPos := polarToXY(g.time, enemy.size-16/4);
+        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false, true);
+        enemy.pColliderAux = collider_add(ent.fpos + auxPos, 16, Collider.Group.HITS_ENEMY, false, false);
     }
 }
 enemy_update :: (pEntity: s32, dt: float)
@@ -413,7 +416,7 @@ enemy_draw :: (pEntity: s32)
         rl.DrawCircleV(ent.fpos, enemy.size, rl.RED); 
     case Enemy.Type.RINGO;
         rl.DrawCircleV(ent.fpos, enemy.size, rl.RED); 
-        rl.DrawCircleV(ent.fpos, enemy.size / 2, rl.BLACK); 
+        rl.DrawCircleV(ent.fpos, enemy.size * sin(g.time)* 0.5 + 1, rl.BLACK); 
         collider := getColliderFromPCollider(enemy.pColliderAux);
         rl.DrawCircleV(collider.fpos, collider.radius, rl.YELLOW); 
     }
@@ -449,7 +452,7 @@ projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
 projectile_process:: (pEntityx: s32)
 {
     proj, ent := getProjectileFromPEntity(pEntityx);
-    proj.pCollider = collider_add(ent.fpos, 6, proj.colliderGroup, true);
+    proj.pCollider = collider_add(ent.fpos, 6, proj.colliderGroup, true, false);
 }
 projectile_update :: (pEntityx: s32, dt: float)
 {
