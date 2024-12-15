@@ -25,8 +25,8 @@ main :: ()
     win := false;
     light_enable(light_create(.{0., 0.}, 1000., 0.2), true);
 
-            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
-            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.RINGO);
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.RINGO);
             enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
             enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
 

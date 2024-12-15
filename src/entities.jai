@@ -99,13 +99,18 @@ Enemy :: struct
     Type :: enum
     {
         BASIC;
+        RINGO;
     }
     pEntity : s32;
+    type : Type;
+
     rangeMax : float;
     rangeOptimal : float;
     speed : float;
+    cooldown : float;
+    size : float;
+
     timer : float;
-    
     pCollider : s32;
 }
 Collider :: struct
@@ -312,15 +317,28 @@ enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
 {
     pEntity := entity_create(Entity.Arch.ENEMY, fpos, TexId.ORB);
     enemy, ent := getEnemyFromPEntity(pEntity);
-    enemy.rangeMax = 500;
-    enemy.rangeOptimal = 300;
-    enemy.speed = 2;
+    enemy.type = type;
+    if type ==
+    {
+    case Enemy.Type.BASIC;
+       enemy.rangeMax = 500;
+       enemy.rangeOptimal = 300;
+       enemy.speed = 2;
+       enemy.cooldown = 1.3;
+       enemy.size = 30;
+    case Enemy.Type.RINGO;
+       enemy.rangeMax = 600;
+       enemy.rangeOptimal = 400;
+       enemy.speed = 1;
+       enemy.cooldown = 2.1;
+       enemy.size = 50;
+    }
     return pEntity;
 }
 enemy_process:: (pEntity: s32)
 {
     enemy, ent := getEnemyFromPEntity(pEntity);
-    enemy.pCollider = collider_add(ent.fpos, 30, Collider.Group.HITS_ENEMY, false);
+    enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
 }
 enemy_update :: (pEntity: s32, dt: float)
 {
@@ -331,7 +349,6 @@ enemy_update :: (pEntity: s32, dt: float)
         entity_destroy(pEntity);
         return;
     }
-
     toPlayer := entPlayer.fpos - ent.fpos;
     toPlayerLen := length(toPlayer);
 
@@ -345,18 +362,36 @@ enemy_update :: (pEntity: s32, dt: float)
     if isCollided
         ent.fvel -= vector * 0.5; // 0.5 makes it smoother, less jumpy
 
-    if toPlayerLen < enemy.rangeMax && enemy.timer > 1.3
+    if toPlayerLen < enemy.rangeMax && enemy.timer > enemy.cooldown
     {
         enemy.timer = 0;
-        projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax, 
-            Collider.Group.HITS_PLAYER);
+        if enemy.type ==
+        {
+        case Enemy.Type.BASIC;
+            projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax, 
+                Collider.Group.HITS_PLAYER);
+        case Enemy.Type.RINGO;
+            for i : 0..5
+            {
+                dir := polarToXY(xx i, 10);
+                projectile_create(ent.fpos + dir, ent.fpos + dir * 2, Projectile.Type.LINEAR, 
+                    enemy.rangeMax, Collider.Group.HITS_PLAYER);
+            }
+        }
     }    
     ent.fpos += ent.fvel;
 }
 enemy_draw :: (pEntity: s32)
 {
     enemy, ent := getEnemyFromPEntity(pEntity);
-    rl.DrawCircleV(ent.fpos, 30, rl.RED); 
+    if enemy.type ==
+    {
+    case Enemy.Type.BASIC;
+        rl.DrawCircleV(ent.fpos, enemy.size, rl.RED); 
+    case Enemy.Type.RINGO;
+        rl.DrawCircleV(ent.fpos, enemy.size, rl.RED); 
+        rl.DrawCircleV(ent.fpos, enemy.size / 2, rl.BLACK); 
+    }
 }
 projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
                         range: float = 500, colliderGroup: Collider.Group) -> s32
