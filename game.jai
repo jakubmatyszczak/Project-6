@@ -17,7 +17,7 @@ main :: ()
     rl.InitAudioDevice();
     music := rl.LoadMusicStream("res/sfx/battle.ogg");
     rl.PlayMusicStream(music);
-    rl.ToggleFullscreen();
+    // rl.ToggleFullscreen();
     rl.SetTargetFPS(75);
     content_init(*g.content);
 
@@ -84,12 +84,15 @@ main :: ()
         {
             sound_play(SfxId.ALARM, 0.7, 2.);
             difficultyBumpTimer = -30.;
+            spawnBasic *= 0.8;
+            spawnRingo *= 0.9;
             mainLight.intensity = xx(mainLight.intensity * 0.7);
+            mainLight.radius *= 0.9;
         }
         if spawnTimerBasic > spawnBasic
         {
             spawnTimerBasic = 0.;
-            for 0..level*2
+            for 0..level*2 
                 enemy_create(polarToXY(random_get_within_range(0. , 6.283), random_get_within_range(800, 1500)), Enemy.Type.BASIC);
         }
         if spawnTimerRingo > spawnRingo

@@ -427,6 +427,7 @@ effect_update :: (pEntityx : s32, dt: float)
         using effect;
         timer += dt;
         ent.fpos += ent.fvel;
+        ent.fvel *= 0.8;
         if pLight
             light_update(pLight, ent.fpos);
         if timer < timePerFrame 
