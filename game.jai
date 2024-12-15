@@ -86,6 +86,7 @@ main :: ()
             difficultyBumpTimer = -20.;
             spawnBasic *= 0.8;
             spawnRingo *= 0.8;
+            mainLight.intensity = xx(mainLight.intensity * 0.7);
         }
         if spawnTimerBasic > spawnBasic
         {

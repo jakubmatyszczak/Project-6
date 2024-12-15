@@ -766,10 +766,11 @@ player_draw :: (pEntity: s32)
 {
     p, e := getPlayerFromPEntity(pEntity);
     e.dpos = e.fpos;
-    sine := cos(g.time * 3.14159);    
-    rl.DrawEllipse(xx e.fpos.x, xx e.fpos.y, 12+sine, 8+sine, .{50,50,50,200});
+    dir := -1.;
+    if p.aim.x > e.fpos.x
+        dir = 1.;
     rl.DrawTexturePro(g.content.textures[e.pTexture],
-        .{0,0,32,64},
+        .{0,0, dir * 32,64},
         .{e.dpos.x, e.dpos.y, 32, 64},
         .{16, 32},
         0, rl.RED);
