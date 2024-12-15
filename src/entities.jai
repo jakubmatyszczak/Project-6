@@ -126,6 +126,7 @@ Effect :: struct
         EXPLOSION_LINE;
     }
     pEntity : s32;
+    pLight : s32;
     
     timer : float;
 
@@ -222,13 +223,13 @@ entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
     {
         if entity.active
             continue;
+        memset(entity, 0, size_of(Entity));
         entity.active = true;
         entity.arch = arch;
         entity.fpos = fpos;
         entity.pTexture = pTexture;
         entity.scale = 1;
         entity.color = rl.WHITE;
-        memset(entity.data.data, 0, entity.data.count);
         g.nEntities += 1;
         return cast(s32)it_index;
     }
@@ -349,6 +350,7 @@ getColliderFromPCollider :: (pCollider: s32) -> *Collider
 {
     return *g.colliders[pCollider];
 }
+
 // relativeRadius is apperant size, for example for a 32x32 box it will be 16-22.6 (a/2, or d/2)
 effect_create :: (fpos : Vector2, type: Effect.Type, relativeRadius: float, color: rl.Color) -> s32
 {
@@ -374,12 +376,16 @@ effect_create :: (fpos : Vector2, type: Effect.Type, relativeRadius: float, colo
                 frameSize = .{32, 32};
                 timePerFrame = 0.03;
                 ent.scale = relativeRadius / 8;
+                pLight = light_create(ent.fpos, relativeRadius*4, 1., rl.ORANGE);
+                light_enable(pLight, true);
             case Type.EXPLOSION_LINE;
                 frame = 0;
                 frames = 6;
                 frameSize = .{16, 16};
                 timePerFrame = 0.03;
                 ent.scale = relativeRadius / 8;
+                pLight = light_create(ent.fpos, relativeRadius*4, 0.5, rl.PURPLE);
+                light_enable(pLight, true);
         }
     }
     return pEntity;
@@ -391,12 +397,16 @@ effect_update :: (pEntityx : s32, dt: float)
         using effect;
         timer += dt;
         ent.fpos += ent.fvel;
+        if pLight
+            light_update(pLight, ent.fpos);
         if timer < timePerFrame 
             return;
         timer = 0.;
         frame += 1;
         if frame > frames
         {
+            if pLight
+                light_delete(pLight);
             entity_destroy(pEntityx);
             return;
         }

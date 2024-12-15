@@ -16,7 +16,7 @@ Lights :: struct
     instances : [maxLights+1]LightSource;
     setup : [maxLights+1]bool;
 }
-light_getById :: (id: s64) -> *LightSource {return *g.light.instances[id];}
+light_getById :: (id: s32) -> *LightSource {return *g.light.instances[xx id];}
 light_create :: (pos : Vector2, radius: float, intensity: float, tint: rl.Color = rl.WHITE) -> id: s32
 {
     for 0..g.light.maxLights
@@ -26,6 +26,7 @@ light_create :: (pos : Vector2, radius: float, intensity: float, tint: rl.Color 
         g.light.instances[it] = .{enabled=false, fpos=pos, radius=radius, intensity=cast(u8)(intensity*255)};
         g.light.instances[it].tint = .{tint.r, tint.g, tint.b, g.light.instances[it].intensity};
         g.light.setup[it] = true;
+        light_enable(xx it, true);
         return xx it;
     }
     return -1;
@@ -52,7 +53,7 @@ light_process :: ()
     {
         if !(g.light.setup[it] && g.light.instances[it].enabled)
             continue;
-        l := light_getById(it);
+        l := light_getById(xx it);
         windowPos := rl.GetWorldToScreen2D(l.fpos, g.camera);
 		windowPos.y = g.light.texture.texture.height - windowPos.y;  // dunno why this is needed
         
@@ -88,5 +89,10 @@ light_draw :: ()
 		0.,
 		.{darkClr, darkClr, darkClr, darkClr});
 	rl.EndBlendMode();
+}
+light_update :: (pLight: s32, fpos : Vector2)
+{
+    light := light_getById(pLight);
+    light.fpos = fpos;
 }
 
