@@ -25,6 +25,10 @@ main :: ()
     win := false;
     light_enable(light_create(.{0., 0.}, 1000., 0.2), true);
 
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
 
     spawnTimer := 0.;
     while 1
@@ -85,6 +89,9 @@ main :: ()
             rl.DrawText("You win!", 200,200,38, rl.WHITE);
             rl.DrawText("Press ENTER to quit.", 200,250,16, rl.WHITE);
         }
+        rl.DrawText(rl.TextFormat("Entities: %", g.nEntities), 20, 20, 18, rl.WHITE);
+        rl.DrawFPS(20, 40);
+        rl.DrawText(rl.TextFormat("FrameTime: %", rl.GetFrameTime()), 20, 60, 18, rl.WHITE);
         rl.EndDrawing();
 
         // finish

@@ -122,15 +122,17 @@ Collider :: struct
     group : Group;
     isHitter : bool;
     
-    processed : bool;
-    hit : bool;
+    processed : bool;   // was processed this frame?
+    collided : bool;    // is colliding with other nonHitter
+    hit : bool;         // was hit by Hitter collider?
+    collisionVector: Vector2; // only valid if collided
 }
 
 collider_add :: (fpos : Vector2, radius : float, group : Collider.Group, isHitter: bool) -> s32
 {
     pCollider : s32 = g.collidersActive;
     g.colliders[pCollider] = .{pCollider = pCollider, fpos = fpos, radius = radius, group = group,
-                                hit = false, processed = false, isHitter = isHitter};
+                                hit = false, processed = false, collided = false, isHitter = isHitter};
     g.collidersActive += 1;
     return pCollider;
 }
@@ -145,25 +147,42 @@ collider_process :: ()
             colliderB : *Collider = *g.colliders[b];
             colliderA.processed = true;
             colliderB.processed = true;
-            if (colliderA.group != colliderB.group) || (!colliderA.isHitter && !colliderB.isHitter)
+            if colliderA.group != colliderB.group
                 continue;
-            if length(colliderA.fpos - colliderB.fpos) < (colliderA.radius + colliderB.radius)
+            if length(colliderA.fpos - colliderB.fpos) > (colliderA.radius + colliderB.radius)
+                continue; // no intersection
+            if !colliderA.isHitter && !colliderB.isHitter
+            {
+                colliderA.collided = true;
+                colliderB.collided = true;
+                colliderA.collisionVector += normalize(colliderB.fpos - colliderA.fpos);
+                colliderB.collisionVector += -colliderA.collisionVector;
+            }
+            else
             {
                 colliderA.hit = true;
                 colliderB.hit = true;
             }
         }
 }
+collider_finish :: ()
+{
+    for *collider : g.colliders
+    {
+        collider.processed = false;
+        collider.collisionVector = .{};
+    }
+    g.collidersActive = 0;
+}
 collider_isHit :: (pCollider: s32) -> bool
 {
     collider := getColliderFromPCollider(pCollider);
     return (collider.processed && collider.hit);
 }
-collider_finish :: ()
+collider_isCollided :: (pCollider: s32) -> bool, Vector2
 {
-    for *collider : g.colliders
-        collider.processed = false;
-    g.collidersActive = 0;
+    collider := getColliderFromPCollider(pCollider);
+    return (collider.processed && collider.collided), collider.collisionVector;
 }
 
 entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
@@ -178,14 +197,18 @@ entity_create :: (arch: Entity.Arch, fpos: Vector2, pTexture: TexId) -> s32
         entity.pTexture = pTexture;
         entity.scale = 1;
         memset(entity.data.data, 0, entity.data.count);
+        g.nEntities += 1;
         return cast(s32)it_index;
     }
     return -1;
 }
 entity_destroy :: (pEntity: s32)
 {
-    if pEntity > 0 && pEntity < 128
+    if pEntity > 0 && pEntity < 1024
+    {
         g.entities[pEntity].active = false;
+        g.nEntities -= 1;
+    }
 }
 entities_process :: ()
 {
@@ -317,7 +340,12 @@ enemy_update :: (pEntity: s32, dt: float)
         ent.fvel = normalize(toPlayer) * enemy.speed; 
     else
         ent.fvel = .{0, 0};
-    if enemy.timer > 1.3
+
+    isCollided, vector := collider_isCollided(enemy.pCollider);
+    if isCollided
+        ent.fvel -= vector * 0.5; // 0.5 makes it smoother, less jumpy
+
+    if toPlayerLen < enemy.rangeMax && enemy.timer > 1.3
     {
         enemy.timer = 0;
         projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax, 
@@ -474,7 +502,7 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
                 interact: bool, shoot: bool)
 {
     p, e := getPlayerFromPEntity(pEntity);
-    p.aim = e.fpos + normalize(g.mouseWorld - e.fpos) * g.screenSize.y * 0.25;
+    p.aim = e.fpos + normalize(g.mouseWorld - e.fpos) * g.screenSize.y * 0.05;
 
     moveDir : Vector2;
     if up moveDir.y -= 1;

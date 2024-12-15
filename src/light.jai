@@ -11,7 +11,7 @@ LightSource :: struct
 }
 Lights :: struct
 {
-    maxLights :: 32;
+    maxLights :: 1024;
     texture : rl.RenderTexture2D;
     instances : [maxLights+1]LightSource;
     setup : [maxLights+1]bool;

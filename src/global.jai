@@ -33,12 +33,13 @@ Globals :: struct
     mouseWorld : Vector2;
     time : float;
 
-    entities : [128]Entity;
+    entities : [1024]Entity;
+    nEntities : s32;
     player : s32;
     level : u32;
     levelMax :: 3;
     
-    colliders : [128]Collider;
+    colliders : [1024]Collider;
     collidersActive : s32;
 
     light : Lights;
