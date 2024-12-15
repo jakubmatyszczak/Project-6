@@ -112,6 +112,7 @@ Enemy :: struct
 
     timer : float;
     pCollider : s32;
+    pColliderAux : s32;
 }
 Collider :: struct
 {
@@ -340,21 +341,40 @@ enemy_create :: (fpos : Vector2, type: Enemy.Type) -> s32
 enemy_process:: (pEntity: s32)
 {
     enemy, ent := getEnemyFromPEntity(pEntity);
-    enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
+    if enemy.type ==
+    {
+    case Enemy.Type.BASIC;
+        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
+    case Enemy.Type.RINGO;
+        auxPos := polarToXY(g.time, enemy.size);
+        enemy.pCollider = collider_add(ent.fpos, enemy.size, Collider.Group.HITS_ENEMY, false);
+        enemy.pColliderAux = collider_add(ent.fpos + auxPos, 12, Collider.Group.HITS_ENEMY, false);
+    }
 }
 enemy_update :: (pEntity: s32, dt: float)
 {
     enemy, ent := getEnemyFromPEntity(pEntity);
     player, entPlayer := getPlayerFromPEntity(g.player);
-    if (collider_isHit(enemy.pCollider))
-    {
-        entity_destroy(pEntity);
-        return;
-    }
+
     toPlayer := entPlayer.fpos - ent.fpos;
     toPlayerLen := length(toPlayer);
+    
+    if enemy.type ==
+    {
+    case Enemy.Type.BASIC;
+        if (collider_isHit(enemy.pCollider))
+        {
+            entity_destroy(pEntity);
+            return;
+        }
+    case Enemy.Type.RINGO;
+        if (collider_isHit(enemy.pColliderAux))
+        {
+            entity_destroy(pEntity);
+            return;
+        }
+    }
 
-    enemy.timer += dt;
     if  toPlayerLen > enemy.rangeOptimal
         ent.fvel = normalize(toPlayer) * enemy.speed; 
     else
@@ -364,6 +384,7 @@ enemy_update :: (pEntity: s32, dt: float)
     if isCollided
         ent.fvel -= vector * 0.5; // 0.5 makes it smoother, less jumpy
 
+    enemy.timer += dt;
     if toPlayerLen < enemy.rangeMax && enemy.timer > enemy.cooldown
     {
         enemy.timer = 0;
@@ -393,6 +414,8 @@ enemy_draw :: (pEntity: s32)
     case Enemy.Type.RINGO;
         rl.DrawCircleV(ent.fpos, enemy.size, rl.RED); 
         rl.DrawCircleV(ent.fpos, enemy.size / 2, rl.BLACK); 
+        collider := getColliderFromPCollider(enemy.pColliderAux);
+        rl.DrawCircleV(collider.fpos, collider.radius, rl.YELLOW); 
     }
 }
 projectile_create :: (fpos : Vector2, targetx : Vector2, typex: Projectile.Type,
