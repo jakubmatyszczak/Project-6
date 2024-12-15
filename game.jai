@@ -30,7 +30,8 @@ main :: ()
             enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
             enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
 
-    spawnTimer := 0.;
+    spawnTimerBasic := 0.;
+    spawnTimerRingo := -5.;
     while 1
     {
         dt := rl.GetFrameTime();
@@ -39,11 +40,17 @@ main :: ()
         g.mouseWorld = rl.GetScreenToWorld2D(g.mouseScreen, g.camera);
         g.mouseScreen.y = g.screenSize.y - g.mouseScreen.y;
 
-        spawnTimer+=dt;
-        if spawnTimer > 3.
+        spawnTimerBasic+=dt;
+        spawnTimerRingo+=dt;
+        if spawnTimerBasic > 3.
         {
-            spawnTimer = 0.;
+            spawnTimerBasic = 0.;
             enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+        }
+        if spawnTimerRingo > 5.
+        {
+            spawnTimerRingo = 0.;
+            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 1000), Enemy.Type.RINGO);
         }
 
         // process
