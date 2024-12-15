@@ -14,6 +14,9 @@ main :: ()
 
     g.screenSize = .{1920, 1080};
     rl.InitWindow(xx g.screenSize.x, xx g.screenSize.y, "no.6");
+    rl.InitAudioDevice();
+    music := rl.LoadMusicStream("res/sfx/battle.ogg");
+    rl.PlayMusicStream(music);
     // rl.ToggleFullscreen();
     rl.SetTargetFPS(75);
     content_init(*g.content);
@@ -23,22 +26,39 @@ main :: ()
                     target=.{0,0}, rotation=0., zoom=1.};
     g.player = player_create(.{0,0});
 
-    win := false;
     mainLight := light_getById(light_create(.{0., 0.}, 1000., 0.8));
 
-            // enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.RINGO);
-            // enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
-            // enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
-            // enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
-            enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
 
+    win := false;
+    start := false;
+
+    winTime : float;
     spawnTimerBasic := 0.;
     spawnTimerRingo := -5.;
     spawnTimerBoss := -1.;
     bossFightStart : bool = false;
     bossFightInProgress : bool = false;
+    alaramsTriggered := 0;
+    while !start
+    {
+        rl.UpdateMusicStream(music);
+        rl.BeginDrawing();
+        rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), rl.BLACK);
+        rl.DrawText("Use WSAD to move, mouse to AIM, and left mouse button to SHOOT!", 
+            xx (g.screenSize.x/2 - 800), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
+        rl.DrawText("Press SHOOT to start.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+        rl.EndDrawing();
+        if rl.IsMouseButtonPressed(rl.MouseButton.LEFT)
+            start = true;
+    }
+    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.RINGO);
+    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
+    enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.BASIC);
     while 1
     {
+        rl.UpdateMusicStream(music);
         dt := rl.GetFrameTime();
         g.time += dt;
         g.mouseScreen = rl.GetMousePosition();
@@ -51,9 +71,9 @@ main :: ()
 
         if !bossFightStart
         {
-            spawnTimerBasic +=dt;
-            spawnTimerRingo +=dt;
-            spawnTimerBoss +=dt;
+            spawnTimerBasic += dt;
+            spawnTimerRingo += dt;
+            spawnTimerBoss += dt;
         }
         if spawnTimerBasic > 3.
         {
@@ -69,7 +89,10 @@ main :: ()
         {
             bossFightStart = true;
             if bossFightInProgress && frame.nEnemies == 0
+            {
+                winTime = g.time;
                 win = true;
+            }
             if frame.nEnemies == 0 && !bossFightInProgress
             {
                 bossFightInProgress = true;
@@ -83,10 +106,14 @@ main :: ()
         }
         if bossFightInProgress
         {
-            mainLight.intensity = cast(u8)((((sin(g.time*3) + 1.) / 2) * 0.8) * 255); 
-            Basic.print("main: %\n", mainLight.intensity);
+            
+            if alaramsTriggered < 3 && !rl.IsSoundPlaying(g.content.sfx[SfxId.ALARM])
+            {
+                alaramsTriggered += 1;
+                sound_play(SfxId.ALARM, 1., 1.5);
+            }
+            mainLight.intensity = cast(u8)((((sin(g.time*3) + 1.) / 2) * 0.6) * 255);    
         }
-        
 
         //input
         if !win
@@ -121,15 +148,21 @@ main :: ()
             entities_draw();
         rl.EndMode2D();
         light_draw();
+        hud_draw();
         if win
         {
             rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), rl.BLACK);
             rl.DrawText("You win!", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
+            rl.DrawText(rl.TextFormat("Time: %", winTime), xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 140), 38, rl.WHITE);
             rl.DrawText("Press ENTER to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
         }
-        rl.DrawText(rl.TextFormat("Entities: %", g.nEntities), 20, 20, 18, rl.WHITE);
-        rl.DrawFPS(20, 40);
-        rl.DrawText(rl.TextFormat("FrameTime: %", rl.GetFrameTime()), 20, 60, 18, rl.WHITE);
+        if p.ded
+        {
+            rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), .{0,0,0,180});
+            rl.DrawText("DE4D", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
+            rl.DrawText("Press ENTER to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+        }
+
         rl.EndDrawing();
 
         // finish

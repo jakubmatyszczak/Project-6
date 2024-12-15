@@ -10,9 +10,20 @@ TexId :: enum u32
     EXPLOSION;
     EXPLOSION_LINE;
 }
+SfxId :: enum u32
+{
+    NONE :: 0;
+    JUMP :: 1;
+    HIT :: 2;
+    ATTACK_QUICK;
+    ATTACK_LONG;
+    ALARM;
+    BOOM;
+}
 Content :: struct
 {
     textures : [8]rl.Texture2D;
+    sfx : [8]rl.Sound;
 }
 content_init :: (c : *Content)
 {
@@ -23,6 +34,19 @@ content_init :: (c : *Content)
     c.textures[TexId.PLAYER] = rl.LoadTexture("res/player.png");
     c.textures[TexId.EXPLOSION] = rl.LoadTexture("res/explosion.png");
     c.textures[TexId.EXPLOSION_LINE] = rl.LoadTexture("res/explosion_line.png");
+    c.sfx[SfxId.JUMP] = rl.LoadSound("res/sfx/jump.wav");
+    c.sfx[SfxId.HIT] = rl.LoadSound("res/sfx/hit.wav");
+    c.sfx[SfxId.ATTACK_QUICK] = rl.LoadSound("res/sfx/attackQuick.wav");
+    c.sfx[SfxId.ATTACK_LONG] = rl.LoadSound("res/sfx/attackLong.wav");
+    c.sfx[SfxId.ALARM] = rl.LoadSound("res/sfx/alarm.wav");
+    c.sfx[SfxId.BOOM] = rl.LoadSound("res/sfx/boom.wav");
+}
+sound_play :: (id: SfxId, volume: float, pitch: float)
+{
+    sound := g.content.sfx[id];
+    rl.SetSoundVolume(sound, volume);
+    rl.SetSoundPitch(sound, pitch); 
+    rl.PlaySound(sound);
 }
 
 Item :: struct
@@ -52,12 +76,17 @@ Player :: struct
 {
     pEntity: s32;
 
+    ded : bool;
     angle : float;
     aim : Vector2;
+    hp : float;
 
     hover : Animation;
     jump : Animation;
+
     pLight : s32;
+    pCollider : s32;
+    pEffectDeath : s32;
 }
 Object :: struct
 {
@@ -254,7 +283,7 @@ entities_process :: ()
         {
             case Arch.UNKNOWN;
             case Arch.PLAYER;
-                // player_process(xx it_index);
+                player_process(xx it_index);
             case Arch.ITEM;
                 item_process(xx it_index);
             case Arch.OBJECT;
@@ -481,6 +510,7 @@ enemy_update :: (pEntity: s32, dt: float)
         {
             effect_create(ent.fpos, Effect.Type.EXPLOSION, enemy.size, rl.RED);
             entity_destroy(pEntity);
+            sound_play(SfxId.BOOM, 1.5, 1.4);
             return;
         }
     case Enemy.Type.RINGO;
@@ -488,6 +518,7 @@ enemy_update :: (pEntity: s32, dt: float)
         {
             effect_create(ent.fpos, Effect.Type.EXPLOSION, enemy.size, rl.RED);
             entity_destroy(pEntity);
+            sound_play(SfxId.BOOM, 1.8, 1.);
             return;
         }
     }
@@ -510,7 +541,9 @@ enemy_update :: (pEntity: s32, dt: float)
         case Enemy.Type.BASIC;
             projectile_create(ent.fpos, entPlayer.fpos, Projectile.Type.LINEAR, enemy.rangeMax, 
                 Collider.Group.HITS_PLAYER);
+            sound_play(SfxId.ATTACK_QUICK, 1., random_get_within_range(0.4, 0.5));
         case Enemy.Type.RINGO;
+            sound_play(SfxId.ATTACK_LONG, 1., random_get_within_range(0.4, 0.5));
             for i : 0..5
             {
                 dir := polarToXY(xx i, 10);
@@ -672,6 +705,7 @@ player_create :: (pos : Vector2) -> s32
     p : *Player = xx e.data.data;
     p.hover = anim_create_hover(2, 16);
     p.jump = anim_create_jump(-64);
+    p.hp = 100;
     anim_start(*p.hover);
     p.pLight = light_create(pos, 450, 1., 0.75);
     return pEntity;
@@ -689,9 +723,16 @@ player_input :: (pEntity: s32, up : bool, down : bool, left : bool, right : bool
     if left moveDir.x -= 1;
     e.fvel += normalize(moveDir) * 1.25;
     e.fvel *= 0.8;
-    e.fpos += e.fvel;
     if shoot 
+    {
         projectile_create(e.fpos, g.mouseWorld, Projectile.Type.MAGIC, 500, Collider.Group.HITS_ENEMY);
+        sound_play(SfxId.ATTACK_QUICK, 1.0, random_get_within_range(1.6, 2.0));
+    }
+}
+player_process:: (pEntity: s32)
+{
+    player, ent := getPlayerFromPEntity(pEntity);
+    player.pCollider = collider_add(ent.fpos, 32, Collider.Group.HITS_PLAYER, false, true);
 }
 player_update :: (pEntity: s32, dt : float)
 {
@@ -699,8 +740,25 @@ player_update :: (pEntity: s32, dt : float)
     l := light_getById(p.pLight);
     l.fpos = e.fpos;
     l.direction = atan2(-(g.mouseWorld - e.fpos).y, (g.mouseWorld - e.fpos).x) - 1.579;
-    
     l.intensity = cast(u8)(clamp(0., 255., ((1500. - length(-e.fpos)) / 1500 * 255)));
+    
+    if p.hp < 100.
+        p.hp += 1.*dt;
+    if collider_isHit(p.pCollider)
+    {
+        sound_play(SfxId.HIT, 1., random_get_within_range(0.8, 1.));
+        p.hp -= 33.;
+    }
+    if p.hp <= 0. && p.pEffectDeath == 0
+    {
+        p.ded = true;
+        p.pEffectDeath = effect_create(e.fpos, Effect.Type.EXPLOSION, 250, rl.ORANGE);
+        entity_destroy(pEntity);
+        return;
+    }
+    
+    e.fpos += e.fvel*75*dt;
+
     anim_update(*p.hover, dt);
     anim_update(*p.jump, dt);
 }
@@ -719,6 +777,14 @@ player_draw :: (pEntity: s32)
 hud_draw :: ()
 {
     player, playerEntity := getPlayerFromPEntity(g.player);
+    if player.hp <= 0
+        return;
+    clr := rl.DARKGREEN;
+    if player.hp < 60
+        clr = rl.GOLD;
+    if player.hp < 33
+        clr = rl.MAROON;
+    rl.DrawRectangle(0, xx(g.screenSize.y - 16.), xx(g.screenSize.x * player.hp / 100.), 16, clr);
 }
 item_create_knife :: (pos : Vector2)
 {
