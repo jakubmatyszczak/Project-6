@@ -3,7 +3,6 @@ Basic :: #import "Basic";
 #import "Random";
 rl :: #import "raylib";
 #load "src/global.jai";
-#load "src/level.jai";
 #load "src/entities.jai";
 
 main :: ()
@@ -14,7 +13,7 @@ main :: ()
     rl.InitAudioDevice();
     music := rl.LoadMusicStream("res/sfx/battle.ogg");
     content_init(*g.content);
-    rl.SetTargetFPS(75);
+    rl.SetTargetFPS(60);
     // rl.ToggleFullscreen();
 
     while game(*music)
@@ -37,7 +36,7 @@ game :: (music: *rl.Music) -> bool
     win := false;
     start := false;
 
-    winTime : float;
+    endTime : float;
     spawnBasic := 3.;
     spawnRingo := 8.;
     spawnTimerBasic := 0.;
@@ -113,7 +112,7 @@ game :: (music: *rl.Music) -> bool
             bossFightStart = true;
             if bossFightInProgress && frame.nEnemies == 0 && !win
             {
-                winTime = g.time;
+                endTime = g.time;
                 win = true;
             }
             if frame.nEnemies == 0 && !bossFightInProgress
@@ -178,14 +177,17 @@ game :: (music: *rl.Music) -> bool
         {
             rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), rl.BLACK);
             rl.DrawText("You win!", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
-            rl.DrawText(rl.TextFormat("Time: %", winTime), xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 140), 38, rl.WHITE);
+            rl.DrawText(rl.TextFormat("Finished in: % seconds", Basic.formatFloat(endTime, trailing_width = 2)), xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 140), 38, rl.WHITE);
             rl.DrawText("Press ESCAPE to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
             rl.DrawText("Press ENTER to restart.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2+100), 16, rl.WHITE);
         }
         if p.ded
         {
+            if(endTime < 1)
+                endTime = g.time;
             rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), .{0,0,0,180});
             rl.DrawText("DE4D", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
+            rl.DrawText(rl.TextFormat("Survived for: % seconds", Basic.formatFloat(endTime, trailing_width = 2)), xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 50), 16, rl.WHITE);
             rl.DrawText("Press ESCAPE to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
             rl.DrawText("Press ENTER to restart.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2+100), 16, rl.WHITE);
         }
