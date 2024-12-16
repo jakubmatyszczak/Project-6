@@ -656,6 +656,8 @@ player_update :: (pEntity: s32, dt : float)
 player_draw :: (pEntity: s32)
 {
     p, e := getPlayerFromPEntity(pEntity);
+    if p.ded 
+        return;
     e.dpos = e.fpos;
     dir := -1.;
     if p.aim.x > e.fpos.x
@@ -669,7 +671,7 @@ player_draw :: (pEntity: s32)
 hud_draw :: ()
 {
     player, playerEntity := getPlayerFromPEntity(g.player);
-    if player.hp <= 0
+    if player.ded 
         return;
     clr := rl.DARKGREEN;
     if player.hp < 60
