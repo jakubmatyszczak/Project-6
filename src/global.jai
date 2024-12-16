@@ -27,6 +27,7 @@ Entity :: struct
 }
 Globals :: struct
 {
+    nMaxEntities :: 1024;
     content : Content;
     camera : rl.Camera2D;
     screenSize : Vector2;
@@ -34,13 +35,11 @@ Globals :: struct
     mouseWorld : Vector2;
     time : float;
 
-    entities : [1024]Entity;
+    entities : [nMaxEntities]Entity;
     nEntities : s32;
     player : s32;
-    level : u32;
-    levelMax :: 3;
     
-    colliders : [1024]Collider;
+    colliders : [nMaxEntities]Collider;
     collidersActive : s32;
 
     light : Lights;
@@ -52,6 +51,19 @@ FrameData :: struct
 
 frame := FrameData.{};
 g := Globals.{};
+
+reset_state :: ()
+{
+    using g;
+    time = 0;
+    memset(*entities, 0, nMaxEntities * size_of(Entity));
+    nEntities = 0;
+    player = 0;
+    memset(*colliders, 0, nMaxEntities * size_of(Collider));
+    collidersActive = 0;
+    light = .{};
+    frame.nEnemies = 0;
+}
 
 polarToXY :: (angle: float, radius : float) -> Vector2
 {

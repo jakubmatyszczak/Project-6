@@ -9,25 +9,30 @@ rl :: #import "raylib";
 main :: ()
 {
     random_seed(Basic.current_time_monotonic().low);
-
-    entity_create(Entity.Arch.UNKNOWN, .{}, 0); // Dummy entity to occupy index 0
-
     g.screenSize = .{1920, 1080};
     rl.InitWindow(xx g.screenSize.x, xx g.screenSize.y, "no.6");
     rl.InitAudioDevice();
     music := rl.LoadMusicStream("res/sfx/battle.ogg");
-    rl.PlayMusicStream(music);
-    // rl.ToggleFullscreen();
-    rl.SetTargetFPS(75);
     content_init(*g.content);
+    rl.SetTargetFPS(75);
+    // rl.ToggleFullscreen();
 
+    while game(*music)
+        reset_state();
+
+    if rl.IsWindowFullscreen()
+        rl.ToggleFullscreen();
+    rl.CloseWindow();
+}
+game :: (music: *rl.Music) -> bool
+{
+    entity_create(Entity.Arch.UNKNOWN, .{}, 0); // Dummy entity to occupy index 0
     g.light.texture = rl.LoadRenderTexture(xx g.screenSize.x, xx g.screenSize.y);
+    defer rl.UnloadRenderTexture(g.light.texture);
     g.camera = .{offset= .{xx (g.screenSize.x / 2), xx (g.screenSize.y / 2)},
                     target=.{0,0}, rotation=0., zoom=1.};
     g.player = player_create(.{0,0});
-
     mainLight := light_getById(light_create(.{0., 0.}, 1000., 0.8));
-
 
     win := false;
     start := false;
@@ -43,6 +48,8 @@ main :: ()
     bossFightInProgress : bool = false;
     alaramsTriggered := 0;
     level := 0;
+    rl.SeekMusicStream(music, 0.);
+    rl.PlayMusicStream(music);
     while !start
     {
         rl.UpdateMusicStream(music);
@@ -50,9 +57,9 @@ main :: ()
         rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), rl.BLACK);
         rl.DrawText("Use WSAD to move, mouse to AIM, and left mouse button to SHOOT!", 
             xx (g.screenSize.x/2 - 800), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
-        rl.DrawText("Press SHOOT to start.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+        rl.DrawText("Press ENTER to start.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
         rl.EndDrawing();
-        if rl.IsMouseButtonPressed(rl.MouseButton.LEFT)
+        if rl.IsKeyReleased(rl.KeyboardKey.ENTER)
             start = true;
     }
     enemy_create(polarToXY(random_get_within_range(0. , 6.283), 800), Enemy.Type.RINGO);
@@ -104,7 +111,7 @@ main :: ()
         if spawnTimerBoss > 0
         {
             bossFightStart = true;
-            if bossFightInProgress && frame.nEnemies == 0
+            if bossFightInProgress && frame.nEnemies == 0 && !win
             {
                 winTime = g.time;
                 win = true;
@@ -144,7 +151,9 @@ main :: ()
                 );
         }
         if(rl.IsKeyPressed(cast(s32)rl.KeyboardKey.KEY_ENTER))
-           break;
+           return true;
+        if(rl.IsKeyPressed(cast(s32)rl.KeyboardKey.KEY_ESCAPE))
+            return false;
         
         //update
         entities_update(dt);
@@ -170,13 +179,15 @@ main :: ()
             rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), rl.BLACK);
             rl.DrawText("You win!", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
             rl.DrawText(rl.TextFormat("Time: %", winTime), xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 140), 38, rl.WHITE);
-            rl.DrawText("Press ENTER to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+            rl.DrawText("Press ESCAPE to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+            rl.DrawText("Press ENTER to restart.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2+100), 16, rl.WHITE);
         }
         if p.ded
         {
             rl.DrawRectangle(100, 100, xx (g.screenSize.x - 200), xx (g.screenSize.y - 200), .{0,0,0,180});
             rl.DrawText("DE4D", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2 - 100), 38, rl.WHITE);
-            rl.DrawText("Press ENTER to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+            rl.DrawText("Press ESCAPE to quit.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2), 16, rl.WHITE);
+            rl.DrawText("Press ENTER to restart.", xx (g.screenSize.x/2 - 100), xx (g.screenSize.y/2+100), 16, rl.WHITE);
         }
 
         rl.EndDrawing();
@@ -185,7 +196,5 @@ main :: ()
         collider_finish();
         memset(*frame, 0, size_of(FrameData));
     }
-    if rl.IsWindowFullscreen()
-        rl.ToggleFullscreen();
-    rl.CloseWindow();
+    return false;
 }
