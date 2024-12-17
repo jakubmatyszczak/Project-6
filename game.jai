@@ -14,7 +14,7 @@ main :: ()
     music := rl.LoadMusicStream("res/sfx/battle.ogg");
     content_init(*g.content);
     rl.SetTargetFPS(60);
-    // rl.ToggleFullscreen();
+    rl.ToggleFullscreen();
 
     while game(*music)
         reset_state();
