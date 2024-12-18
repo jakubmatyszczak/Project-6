@@ -1,6 +1,7 @@
 # P6
 P6 is an arena shooter, with goal of experimenting with 2D FOV, lighting, and basic action shooter
 gameplay elements.
+[![no6_demo](https://img.youtube.com/vi/8Iqclcznogs/0.jpg)](https://www.youtube.com/watch?v=8Iqclcznogs)
 
 ## Build
 P6 is written in JAI, a programming language made for games and high performance computing, by 
