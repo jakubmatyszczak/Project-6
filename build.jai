@@ -12,9 +12,9 @@ Basic :: #import "Basic";
     options := get_build_options(w);
     args := options.compile_time_command_line;
     isReleaseBuild := false;
-    for arg : args 
+    for arg : args
     {
-        if arg == 
+        if arg ==
         {
             case "release";
             {
@@ -31,18 +31,30 @@ Basic :: #import "Basic";
     options.output_executable_name = "no6";
     set_build_options(options, w);
 
+    compiler_begin_intercept(w);
+
     add_build_file("game.jai", w);
-    set_build_options_dc(.{do_output=false});
-    
+
+    while true
+    {
+        message := compiler_wait_for_message();
+
+        if message.kind == .COMPLETE
+            break;
+    }
+    compiler_end_intercept(w);
+
     #if OS == .WINDOWS
     {
-        ico_data := create_ico_file_from_bitmap_filename("res\\icon.png");
-        defer free(ico_data);
-        if !ico_data then 
-            print("Could not load image for icon.\n");
+        exe_name := Basic.sprint("%.exe", options.output_executable_name);
+        ico_data := Ico_File.create_ico_file_from_bitmap_filename("res\\icon.png");
+        if !ico_data then
+            Basic.print("Could not load image for icon.\n");
+        Windows_Resources.disable_runtime_console();
         Windows_Resources.set_icon_by_data(exe_name, ico_data);
         manifest_options: Windows_Resources.Manifest_Options;
         Windows_Resources.add_manifest_to_executable(exe_name, manifest_options);
     }
+    set_build_options_dc(.{do_output=false});
 }
 

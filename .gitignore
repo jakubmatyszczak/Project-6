@@ -1,3 +1,6 @@
 game
 .build
 no6
+*.exe
+*.pdb
+
